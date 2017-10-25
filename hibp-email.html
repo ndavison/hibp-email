@@ -1,0 +1,132 @@
+<link rel="import" href="../polymer/polymer-element.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+
+<dom-module id="hibp-email">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+
+      div a {
+        display: block;
+        padding: 7px;
+        text-decoration: none;
+      }
+
+      div a:hover {
+        opacity: 0.6;
+      }
+    </style>
+    <div><a href="https://haveibeenpwned.com">[[message]]</a></div>
+    <iron-ajax
+        id="hibpAPI"
+        url="https://haveibeenpwned.com/api/v2/breachedaccount/"
+        handle-as="json"
+        on-response="_handleResponse"
+        on-error="_handleError">
+    </iron-ajax>
+  </template>
+
+  <script>
+    /**
+     * `hibp-email`
+     * Displays whether an email has been detected in an account breach according to haveibeenpwned.com.
+     *
+     * @customElement
+     * @polymer
+     * @demo demo/index.html
+     */
+    class HibpEmail extends Polymer.Element {
+
+      static get is() { return 'hibp-email'; }
+
+      static get properties() {
+        return {
+          'email': {
+            type: String,
+            observer: '_emailChanged'
+          },
+          'message': {
+            type: String
+          },
+          'successColor': {
+            type: String,
+            value: '#199647'
+          },
+          'failColor': {
+            type: String,
+            value: '#f44242'
+          },
+          'errorColor': {
+            type: String,
+            value: '#f44242'
+          },
+          'successTextColor': {
+            type: String,
+            value: 'white'
+          },
+          'failTextColor': {
+            type: String,
+            value: 'white'
+          },
+          'errorTextColor': {
+            type: String,
+            value: 'white'
+          }
+        }
+      }
+
+      checkEmailForBreaches() {
+        if (this.$.hibpAPI.url.match(/breachedaccount\/.+$/)) {
+          this.$.hibpAPI.url = this.$.hibpAPI.url.replace(/breachedaccount\/.+$/, 'breachedaccount/');
+        }
+        if (this.email) {
+          this.$.hibpAPI.url += encodeURIComponent(this.email);
+          this.$.hibpAPI.generateRequest();
+        }
+      }
+
+      _handleResponse(data) {
+        const breachCount = data.detail.response.length;
+        const breachWording = breachCount > 1 ? 'breaches' : 'breach';
+        if (breachCount > 0) {
+          this._showMessage('Your email ' + this.email + ' has been detected in ' + breachCount + ' data ' + breachWording + ' according to haveibeenpwned.com.', this.failColor, this.failTextColor);
+        }
+        this.dispatchEvent(new CustomEvent('hibp-email:breach-found'));
+      }
+
+      _handleError(data) {
+        // 404's are actually good! it means the email has no breaches
+        if (data.detail.request.status == 404) {
+          this._showMessage('Your email ' + this.email + ' has not been detected in any data breaches according to haveibeenpwned.com', this.successColor, this.successTextColor);
+          this.dispatchEvent(new CustomEvent('hibp-email:no-breaches-found'));
+        } else {
+          this.dispatchEvent(new CustomEvent('hibp-email:api-error', {detail: {status: data.detail.request.status, statusText: data.detail.request.statusText}}));
+        }
+      }
+
+      _emailChanged() {
+        var el = this.shadowRoot.querySelector('div a');
+        if (this.email) {
+          this.checkEmailForBreaches();
+          el.style.display = 'block';
+          el.style.visibility = 'visible';
+        } else {
+          el.style.display = 'none';
+          el.style.visibility = 'hidden';
+        }
+      }
+
+      _showMessage(message, color, textColor) {
+        var el = this.shadowRoot.querySelector('div a');
+        el.style.background = color;
+        el.style.color = textColor;
+        this.message = message;
+      }
+
+    }
+
+    window.customElements.define(HibpEmail.is, HibpEmail);
+  </script>
+</dom-module>

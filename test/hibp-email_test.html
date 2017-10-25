@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>hibp-email test</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../web-component-tester/browser.js"></script>
+
+    <link rel="import" href="../hibp-email.html">
+  </head>
+  <body>
+
+    <test-fixture id="HIBPEmailTestFixture">
+      <template>
+        <hibp-email email="test@test.com"></hibp-email>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('hibp-email', () => {
+
+        test('HTTP 200 response from API results in a fail.', function(done) {
+          server = sinon.fakeServer.create();
+          server.respondWith('GET', /.*/, [200, {'Content-Type': 'application/json'}, '[{"a":"b"}]']);
+          var el = fixture('HIBPEmailTestFixture');
+          el.addEventListener('hibp-email:breach-found', function() {
+            done()
+          });
+          server.respond();
+        });
+
+        test('HTTP 404 response from API results in a success.', function(done) {
+          server = sinon.fakeServer.create();
+          server.respondWith('GET', /.*/, [404, {'Content-Type': 'application/json'}, '']);
+          var el = fixture('HIBPEmailTestFixture');
+          el.addEventListener('hibp-email:no-breaches-found', function() {
+            done()
+          });
+          server.respond();
+        });
+
+        test('HTTP 429 response from API results in a error.', function(done) {
+          server = sinon.fakeServer.create();
+          server.respondWith('GET', /.*/, [429, {'Content-Type': 'application/json'}, '']);
+          var el = fixture('HIBPEmailTestFixture');
+          el.addEventListener('hibp-email:api-error', function() {
+            done()
+          });
+          server.respond();
+        });
+
+        test('an empty email attribute prevents display.', function() {
+          var el = fixture('HIBPEmailTestFixture');
+          var aEl = el.shadowRoot.querySelector('a');
+          el.email = '';
+          assert.equal(aEl.style.display, 'none');
+          assert.equal(aEl.style.visibility, 'hidden');
+        });
+
+      });
+    </script>
+
+  </body>
+</html>
