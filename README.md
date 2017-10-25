@@ -7,6 +7,7 @@ Displays whether an email has been detected in an account breach according to Ha
 ```
 <custom-element-demo>
   <template>
+    <script src="../webcomponentsjs/webcomponents-lite.js"></script>
     <link rel="import" href="hibp-email.html">
     <next-code-block></next-code-block>
   </template>
